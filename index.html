@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ElecTrack · Gestión de Instalaciones</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#222535;--surface3:#2a2e42;--border:#2e3248;--accent:#4f8ef7;--accent2:#7c5cfc;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--text:#e8eaf0;--text2:#8b90a7;--text3:#555a74;--radius:12px;--radius-sm:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:radial-gradient(ellipse at 20% 50%,#1a1f3a 0%,var(--bg) 60%)}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 28px;width:100%;max-width:380px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.login-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.login-logo-text{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.login-logo-text span{color:var(--accent)}
+.login-title{font-size:22px;font-weight:700;margin-bottom:6px}
+.login-sub{color:var(--text2);font-size:14px;margin-bottom:24px}
+.user-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.user-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 12px;cursor:pointer;transition:all .2s;text-align:left;display:flex;flex-direction:column;gap:4px;font-family:'DM Sans',sans-serif}
+.user-btn:hover{border-color:var(--accent);background:var(--surface3)}
+.user-btn.admin{grid-column:1/-1;flex-direction:column;align-items:center;gap:8px;padding:20px;margin-top:8px;border:1px dashed var(--border)}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-role{font-size:11px;color:var(--text2)}
+.admin-login-form{display:none;width:100%;margin-top:8px}
+.admin-login-form.show{display:block}
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-logo{font-size:16px;font-weight:700}
+.topbar-logo span{color:var(--accent)}
+.topbar-user{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 6px}
+.topbar-user-name{font-size:13px;font-weight:500}
+.logout-btn{background:none;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:6px;transition:all .2s;font-family:'DM Sans',sans-serif}
+.logout-btn:hover{color:var(--text);background:var(--surface2)}
+.main-content{flex:1;padding:16px;max-width:640px;margin:0 auto;width:100%}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:9px 8px;border:none;background:none;color:var(--text2);border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;transition:all .2s;font-family:'DM Sans',sans-serif}
+.tab.active{background:var(--accent);color:#fff}
+.tab-icon{display:block;font-size:16px;margin-bottom:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-title{font-size:15px;font-weight:600}
+.section-title{font-size:13px;font-weight:600;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
+.form-input,.form-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;transition:border-color .2s}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--accent)}
+.form-select option{background:var(--surface2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#3d7de8}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-full{width:100%;justify-content:center;padding:13px}
+.btn-sm{padding:6px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-blue{background:rgba(79,142,247,.15);color:var(--accent)}
+.badge-purple{background:rgba(124,92,252,.15);color:var(--accent2)}
+.badge-orange{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-yellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+.scheme-selector{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.scheme-btn{padding:14px 8px;border:2px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);cursor:pointer;text-align:center;transition:all .2s;font-family:'DM Sans',sans-serif}
+.scheme-btn:hover{border-color:var(--accent)}
+.scheme-btn.active{border-color:var(--accent);background:rgba(79,142,247,.12)}
+.scheme-btn-icon{font-size:22px;margin-bottom:4px}
+.scheme-btn-label{font-size:13px;font-weight:700;color:var(--text)}
+.scheme-btn-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.scheme-btn.active .scheme-btn-label{color:var(--accent)}
+.scheme-loaded-banner{display:flex;align-items:center;gap:10px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.25);border-radius:var(--radius-sm);padding:10px 13px;margin-bottom:4px;font-size:13px}
+.install-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+.install-item:hover{border-color:var(--accent)}
+.install-item-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.install-item-name{font-size:14px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.install-item-meta{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.install-item-date{font-size:12px;color:var(--text2)}
+.install-materials{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:none}
+.install-materials.open{display:block}
+.mat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(46,50,72,.5)}
+.mat-row:last-child{border-bottom:none}
+.mat-row-name{font-size:12px;color:var(--text2);flex:1;padding-right:8px}
+.mat-row-qty{font-size:12px;font-weight:600;font-family:'DM Mono',monospace;white-space:nowrap}
+.mat-picker{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.mat-picker-search{display:flex;align-items:center;border-bottom:1px solid var(--border);padding:8px 12px;gap:8px}
+.mat-picker-search input{background:none;border:none;color:var(--text);font-size:13px;flex:1;outline:none;font-family:'DM Sans',sans-serif}
+.mat-picker-list{max-height:180px;overflow-y:auto}
+.mat-picker-item{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.mat-picker-item:hover{background:var(--surface3)}
+.mat-picker-item span{color:var(--text2);font-size:11px}
+.selected-mats{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.selected-mat-row{display:flex;align-items:center;gap:8px;background:var(--surface3);border-radius:var(--radius-sm);padding:8px 10px}
+.selected-mat-name{flex:1;font-size:12px;line-height:1.3}
+.qty-control{display:flex;align-items:center;gap:5px}
+.qty-btn{width:28px;height:28px;border:1px solid var(--border);background:var(--surface2);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text);transition:all .2s;font-family:'DM Sans',sans-serif}
+.qty-btn:hover{background:var(--accent);border-color:var(--accent)}
+.qty-input{width:48px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px;color:var(--text);font-size:13px;font-weight:600;font-family:'DM Mono',monospace}
+.qty-input:focus{outline:none;border-color:var(--accent)}
+.qty-unit{font-size:11px;color:var(--text2)}
+.remove-mat{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0}
+.inv-item{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:8px}
+.inv-item-info{flex:1;min-width:0}
+.inv-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-item-cat{font-size:11px;color:var(--text2);margin-top:2px}
+.inv-item-stock{text-align:right}
+.inv-item-qty{font-size:16px;font-weight:700;font-family:'DM Mono',monospace}
+.inv-item-min{font-size:10px;color:var(--text3)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-ok{background:var(--green)}.status-low{background:var(--red)}.status-warn{background:var(--yellow)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.stat-val{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;margin-bottom:2px}
+.stat-label{font-size:12px;color:var(--text2)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:200}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:20px 16px 32px}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px}
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.filter-btn{flex-shrink:0;padding:7px 13px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .2s;white-space:nowrap;font-family:'DM Sans',sans-serif}
+.filter-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.empty{text-align:center;padding:40px 20px}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-text{font-size:14px;color:var(--text2)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);padding:12px 20px;border-radius:30px;font-size:14px;font-weight:600;z-index:999;transition:transform .3s;white-space:nowrap;background:var(--green);color:#fff}
+.toast.show{transform:translateX(-50%) translateY(0)}.toast.error{background:var(--red)}
+.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.admin-tab{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;font-family:'DM Sans',sans-serif;white-space:nowrap}
+.admin-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.report-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}.report-row:last-child{border-bottom:none}
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px}
+.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scrollbar-hide::-webkit-scrollbar{display:none}.scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div style="color:var(--text2);font-size:14px">Conectando con la base de datos...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen" style="display:none">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">⚡</div>
+      <div class="login-logo-text">Elec<span>Track</span></div>
+    </div>
+    <div class="login-title">Bienvenido</div>
+    <div class="login-sub">Selecciona tu perfil para continuar</div>
+    <div class="user-grid">
+      <button class="user-btn" onclick="login('pablo')">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#4f8ef7,#7c5cfc)">PZ</div>
+        <div class="user-name">Pablo Zayas</div><div class="user-role">Técnico</div>
+      </button>
+      <button class="user-btn" onclick="login('carlos')">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#22c55e,#16a34a)">CS</div>
+        <div class="user-name">Carlos Sanoni</div><div class="user-role">Técnico</div>
+      </button>
+      <button class="user-btn" onclick="login('sergio')">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">SR</div>
+        <div class="user-name">Sergio Rodríguez</div><div class="user-role">Técnico</div>
+      </button>
+      <button class="user-btn" onclick="login('alexander')">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#ec4899,#8b5cf6)">AL</div>
+        <div class="user-name">Alexander</div><div class="user-role">Técnico</div>
+      </button>
+      <button class="user-btn admin" onclick="toggleAdminLogin()">
+        <div class="user-avatar" style="background:linear-gradient(135deg,#64748b,#334155)">🔒</div>
+        <div class="user-name">Administrador</div>
+        <div class="user-role">Acceso con contraseña</div>
+        <div class="admin-login-form" id="adminLoginForm">
+          <div class="form-group" style="margin-top:8px;margin-bottom:8px">
+            <input class="form-input" id="adminEmail" type="email" placeholder="Correo electrónico" onclick="event.stopPropagation()">
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <input class="form-input" id="adminPass" type="password" placeholder="Contraseña" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.stopPropagation();loginAdmin()}">
+          </div>
+          <button class="btn btn-primary btn-full btn-sm" onclick="event.stopPropagation();loginAdmin()">Entrar</button>
+          <div id="adminError" style="color:var(--red);font-size:12px;margin-top:6px;display:none">Credenciales incorrectas</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">Elec<span>Track</span></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="topbar-user">
+        <div class="user-avatar" id="topAvatar" style="width:24px;height:24px;font-size:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600"></div>
+        <div class="topbar-user-name" id="topName"></div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+  </div>
+  <div class="main-content">
+    <!-- TECH VIEW -->
+    <div id="techView">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('myInstalls')"><span class="tab-icon">📋</span>Mis obras</button>
+        <button class="tab" onclick="switchTab('newInstall')"><span class="tab-icon">➕</span>Nueva</button>
+      </div>
+      <div id="myInstalls"><div id="techInstallList"></div></div>
+      <div id="newInstall" style="display:none">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:16px">📍 Datos de la instalación</div>
+          <div class="form-group"><label class="form-label">Cliente / Empresa</label><input class="form-input" id="fClient" placeholder="Nombre del cliente..."></div>
+          <div class="form-group"><label class="form-label">Tipo de corriente</label><select class="form-select" id="fType"><option>Monofásica</option><option>Trifásica</option></select></div>
+          <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="fDate" type="date"></div>
+          <div class="form-group"><label class="form-label">Notas (opcional)</label><input class="form-input" id="fNotes" placeholder="Observaciones..."></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">⚡ Esquema de instalación</div>
+          <div class="scheme-selector">
+            <button class="scheme-btn" id="sBtn2" onclick="loadScheme(2)"><div class="scheme-btn-icon">🔲</div><div class="scheme-btn-label">Esquema 2</div><div class="scheme-btn-sub">Con cuadro</div></button>
+            <button class="scheme-btn" id="sBtn4" onclick="loadScheme(4)"><div class="scheme-btn-icon">🔳</div><div class="scheme-btn-label">Esquema 4</div><div class="scheme-btn-sub">Sin cuadro</div></button>
+            <button class="scheme-btn" id="sBtnCustom" onclick="loadScheme(0)"><div class="scheme-btn-icon">✏️</div><div class="scheme-btn-label">Libre</div><div class="scheme-btn-sub">Personalizada</div></button>
+          </div>
+          <div id="schemeBanner" style="display:none"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">🔧 Materiales</div>
+          <div class="mat-picker"><div class="mat-picker-search"><span style="color:var(--text2)">🔍</span><input id="matSearch" placeholder="Buscar y añadir material..." oninput="filterMats()"></div><div class="mat-picker-list scrollbar-hide" id="matPickerList"></div></div>
+          <div class="selected-mats" id="selectedMats"></div>
+        </div>
+        <button class="btn btn-primary btn-full" id="saveBtn" onclick="saveInstall()">✅ Guardar instalación</button>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+    <!-- ADMIN VIEW -->
+    <div id="adminView" style="display:none">
+      <div class="admin-tabs scrollbar-hide">
+        <button class="admin-tab active" onclick="adminTab('overview')">Resumen</button>
+        <button class="admin-tab" onclick="adminTab('installs')">Instalaciones</button>
+        <button class="admin-tab" onclick="adminTab('inventory')">Inventario</button>
+        <button class="admin-tab" onclick="adminTab('reports')">Informes</button>
+      </div>
+      <div id="adminOverview"><div class="stats-grid" id="statsGrid"></div><div class="section-title">⚠️ Stock bajo</div><div id="lowStockList"></div><div class="section-title" style="margin-top:16px">📋 Últimas instalaciones</div><div id="recentInstalls"></div></div>
+      <div id="adminInstalls" style="display:none">
+        <div class="filter-bar scrollbar-hide" id="adminFilterBar">
+          <button class="filter-btn active" onclick="filterAdminInstalls('all',this)">Todas</button>
+          <button class="filter-btn" onclick="filterAdminInstalls('pablo',this)">Pablo</button>
+          <button class="filter-btn" onclick="filterAdminInstalls('carlos',this)">Carlos</button>
+          <button class="filter-btn" onclick="filterAdminInstalls('sergio',this)">Sergio</button>
+          <button class="filter-btn" onclick="filterAdminInstalls('alexander',this)">Alexander</button>
+        </div>
+        <div id="adminInstallList"></div>
+      </div>
+      <div id="adminInventory" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:14px"><input class="form-input" id="invSearch" placeholder="🔍 Buscar material..." oninput="renderInventory()" style="flex:1"><button class="btn btn-primary btn-sm" onclick="openAddStock()">+ Entrada</button></div>
+        <div class="filter-bar scrollbar-hide" id="catFilterBar"></div>
+        <div id="inventoryList"></div>
+      </div>
+      <div id="adminReports" style="display:none">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px">📊 Exportar informe</div>
+          <div class="form-group"><label class="form-label">Técnico</label><select class="form-select" id="repTech"><option value="all">Todos</option><option value="pablo">Pablo Zayas</option><option value="carlos">Carlos Sanoni</option><option value="sergio">Sergio Rodríguez</option><option value="alexander">Alexander</option></select></div>
+          <div class="form-group"><label class="form-label">Mes</label><input class="form-input" id="repMonth" type="month"></div>
+          <button class="btn btn-primary btn-full" onclick="generateReport()">📥 Exportar CSV</button>
+        </div>
+        <div id="reportPreview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Add Stock -->
+<div class="modal-bg" id="addStockModal" style="display:none" onclick="closeModal('addStockModal')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📦 Entrada de material</div>
+    <div class="form-group"><label class="form-label">Técnico</label><select class="form-select" id="stockTech"><option value="pablo">Pablo Zayas</option><option value="carlos">Carlos Sanoni</option><option value="sergio">Sergio Rodríguez</option><option value="alexander">Alexander</option></select></div>
+    <div class="form-group"><label class="form-label">Material</label><select class="form-select" id="stockMat"></select></div>
+    <div class="form-group"><label class="form-label">Cantidad entregada</label><input class="form-input" id="stockQty" type="number" min="1" placeholder="0"></div>
+    <button class="btn btn-primary btn-full" onclick="addStock()" style="margin-top:8px">✅ Confirmar entrada</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// =================================================================
+//  CONFIG — SUSTITUYE estos valores con los de tu proyecto Firebase
+// =================================================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAJ3MVNZaHnIJTzqCFpxOsa3DFbMxjcf",
+  authDomain: "electracker-e53a4.firebaseapp.com",
+  projectId: "electracker-e53a4",
+  storageBucket: "electracker-e53a4.firebasestorage.app",
+  messagingSenderId: "659681212236",
+  appId: "1:659681212236:web:6d6081c4366395d28281e9"
+};
+
+// Admin credentials (hashed comparison)
+const ADMIN_EMAIL = 'pastorluis2001@gmail.com';
+const ADMIN_HASH = '5a4b3c'; // simplified check
+
+// =================================================================
+//  FIREBASE INIT
+// =================================================================
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+
+// =================================================================
+//  DATA
+// =================================================================
+const USERS = {
+  pablo:     { name:'Pablo Zayas',      initials:'PZ', role:'tech', grad:'linear-gradient(135deg,#4f8ef7,#7c5cfc)' },
+  carlos:    { name:'Carlos Sanoni',    initials:'CS', role:'tech', grad:'linear-gradient(135deg,#22c55e,#16a34a)' },
+  sergio:    { name:'Sergio Rodríguez', initials:'SR', role:'tech', grad:'linear-gradient(135deg,#f59e0b,#ef4444)' },
+  alexander: { name:'Alexander',        initials:'AL', role:'tech', grad:'linear-gradient(135deg,#ec4899,#8b5cf6)' },
+  admin:     { name:'Administrador',    initials:'AD', role:'admin',grad:'linear-gradient(135deg,#64748b,#334155)' }
+};
+
+const MATERIALS_RAW = [
+  {name:'ML TUBO PVC M-32 GRIS ENCHUFABLE RIGIDO',cat:'Tubo/Curva',unit:'m'},
+  {name:'MANGUITO PVC M-32 ENCHUFABLE IP40 GRIS',cat:'Tubo/Curva',unit:'ud'},
+  {name:'ML TUBO CORRUGADO LHA M-32 320 NW GRIS',cat:'Tubo/Curva',unit:'m'},
+  {name:'ML TUBO PVC M-40 GRIS ENCHUFABLE RIGIDO',cat:'Tubo/Curva',unit:'m'},
+  {name:'WLL PINZA + DIN BALANCEADOR POTENCIA DINAMICO MONOFASICO',cat:'Accesorio',unit:'ud'},
+  {name:'Protección sobretensiones permanente 32A Aut.Rearm',cat:'Protección',unit:'ud'},
+  {name:'Protector sobretensión permanente + transitoria EN-50550 IGA 2P 32A C',cat:'Protección',unit:'ud'},
+  {name:'Diferencial 2P 40A 30mA A E 6kA SUPERINMUN',cat:'Diferencial',unit:'ud'},
+  {name:'Borna paso Serie 2016 3 conductores gris',cat:'Accesorio',unit:'ud'},
+  {name:'Placa final intermedia Serie 2016 92mm naranja',cat:'Accesorio',unit:'ud'},
+  {name:'Caja ICP-65 12 elementos con puerta transparente C/Cerradura',cat:'Caja',unit:'ud'},
+  {name:'Caja plexo 105x105x55 7 entradas',cat:'Caja',unit:'ud'},
+  {name:'Caja plexo 155x110x74',cat:'Caja',unit:'ud'},
+  {name:'Interruptor DPN 1P+N 10AC 6kA',cat:'Interruptor',unit:'ud'},
+  {name:'Interruptor DPN 1P+N 16AC 6kA',cat:'Interruptor',unit:'ud'},
+  {name:'Interruptor DPN 1P+N 20AC 6kA',cat:'Interruptor',unit:'ud'},
+  {name:'Interruptor DPN 1P+N 25AC 6kA',cat:'Interruptor',unit:'ud'},
+  {name:'Diferencial 2P 40A 300mA superinmunizado',cat:'Diferencial',unit:'ud'},
+  {name:'Diferencial 2P 25A 30m superinmunizado I',cat:'Diferencial',unit:'ud'},
+  {name:'Magnetotérmico 1P+N 40A C 6kA',cat:'Magnetotérmico',unit:'ud'},
+  {name:'Magnetotérmico 1P+N 25A C 6kA',cat:'Magnetotérmico',unit:'ud'},
+  {name:'Interruptor DPN 1P+N 32AC 6kA',cat:'Interruptor',unit:'ud'},
+  {name:'IGA 4P 32A C 10kA protección sobretensión',cat:'Protección',unit:'ud'},
+  {name:'Protector sobretensión transitoria 4P C 20-',cat:'Protección',unit:'ud'},
+  {name:'Diferencial 4P 40A 30mA superinmunizado',cat:'Diferencial',unit:'ud'},
+  {name:'Magnetotérmico 4P 32A C 6kA',cat:'Magnetotérmico',unit:'ud'},
+  {name:'Protector sobretensión permanente + trans 4P',cat:'Protección',unit:'ud'},
+  {name:'Diferencial 4P 40A 300mA superinmunizado',cat:'Diferencial',unit:'ud'},
+  {name:'Magnetotérmico 4P 40A C 6kA',cat:'Magnetotérmico',unit:'ud'},
+  {name:'Magnetotérmico 4P 25A C 6kA',cat:'Magnetotérmico',unit:'ud'},
+  {name:'Base Schuko modular 16A 250V 2.5 módulos',cat:'Accesorio',unit:'ud'},
+  {name:'Armario con 1x18 módulos superficie puerta',cat:'Caja',unit:'ud'},
+  {name:'Caja de distribución de superficie de 8 elementos',cat:'Caja',unit:'ud'},
+  {name:'Caja de distribución de superficie de 14 elementos',cat:'Caja',unit:'ud'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X6mm AZUL',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X6mm MARRON',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X6mm NEG',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X6mm GRIS',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X6mm A/V',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm AZUL',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm MARRON',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm NEG',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm GRIS',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm A/V',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X16mm AZUL',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X16mm MARRON',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X16mm NEG',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X16mm GRIS',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X16mm A/V',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR 3G10mm RZ1-K 0.6/1KV',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR 3G16mm RZ1-K 0.6/1KV',cat:'Cable',unit:'m'},
+  {name:'CABLE L.H. CPR 5G10mm RZ1-K 0.6/1KV',cat:'Cable',unit:'m'},
+  {name:'FTP CAT 6 4X2X0.52mm L.H.',cat:'Cable datos',unit:'m'},
+  {name:'Curva flexible PVC diámetro 32 gris claro',cat:'Tubo/Curva',unit:'ud'},
+  {name:'Curva Aiscan-CF flexible diámetro 40 gris',cat:'Tubo/Curva',unit:'ud'},
+  {name:'Curva PVC TUPERPLAS gris diámetro 32',cat:'Tubo/Curva',unit:'ud'},
+  {name:'Curva PVC TUPERPLAS gris diámetro 40',cat:'Tubo/Curva',unit:'ud'},
+  {name:'Tubo flexible corrugado libre de halógenos',cat:'Tubo/Curva',unit:'m'},
+  {name:'Tubo Aiscan-CHF corrugado diámetro 40 I',cat:'Tubo/Curva',unit:'m'},
+  {name:'Borna doble de carril + tapa final',cat:'Accesorio',unit:'ud'},
+  {name:'Cuadro estanco 12 elementos con cerradura',cat:'Caja',unit:'ud'},
+  {name:'IGA Sobretensiones 2X32A rearmable REVALCO',cat:'Protección',unit:'ud'},
+  {name:'Diferencial 2X40A 30mA Superinmunizado REVALCO',cat:'Diferencial',unit:'ud'},
+  {name:'Puntera 6mm sencilla',cat:'Accesorio',unit:'ud'},
+  {name:'Puntera 10mm sencilla',cat:'Accesorio',unit:'ud'},
+  {name:'Puntera 16mm sencilla',cat:'Accesorio',unit:'ud'},
+  {name:'Puntera 6mm doble',cat:'Accesorio',unit:'ud'},
+  {name:'Puntera 10mm doble',cat:'Accesorio',unit:'ud'},
+  {name:'Puntera 16mm doble',cat:'Accesorio',unit:'ud'},
+  {name:'Tapa de registro 100x100',cat:'Accesorio',unit:'ud'},
+  {name:'Tapa de registro 130x200',cat:'Accesorio',unit:'ud'},
+  {name:'Tapa de registro 200x200',cat:'Accesorio',unit:'ud'},
+  {name:'Caja de registro estanca 100x100',cat:'Caja',unit:'ud'},
+  {name:'Caja de registro estanca 130x200',cat:'Caja',unit:'ud'},
+  {name:'Tubo corrugado 32mm',cat:'Tubo/Curva',unit:'m'},
+  {name:'Taco brida',cat:'Accesorio',unit:'ud'},
+  {name:'Brida',cat:'Accesorio',unit:'ud'},
+];
+
+const ESQUEMA_2 = [
+  {name:'Borna doble de carril + tapa final',qty:2},
+  {name:'Cuadro estanco 12 elementos con cerradura',qty:1},
+  {name:'IGA Sobretensiones 2X32A rearmable REVALCO',qty:1},
+  {name:'Diferencial 2X40A 30mA Superinmunizado REVALCO',qty:1},
+  {name:'ML TUBO PVC M-32 GRIS ENCHUFABLE RIGIDO',qty:0},
+  {name:'Curva PVC TUPERPLAS gris diámetro 32',qty:0},
+  {name:'Curva flexible PVC diámetro 32 gris claro',qty:0},
+  {name:'CABLE L.H. CPR 3G10mm RZ1-K 0.6/1KV',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm AZUL',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm MARRON',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm A/V',qty:0},
+  {name:'Puntera 6mm sencilla',qty:100},{name:'Puntera 10mm sencilla',qty:100},
+  {name:'Tapa de registro 100x100',qty:3},
+  {name:'Caja de registro estanca 100x100',qty:3},
+  {name:'Tubo corrugado 32mm',qty:100},
+  {name:'Taco brida',qty:100},{name:'Brida',qty:100},
+];
+const ESQUEMA_4 = [
+  {name:'IGA Sobretensiones 2X32A rearmable REVALCO',qty:1},
+  {name:'Diferencial 2X40A 30mA Superinmunizado REVALCO',qty:1},
+  {name:'ML TUBO PVC M-32 GRIS ENCHUFABLE RIGIDO',qty:0},
+  {name:'Curva PVC TUPERPLAS gris diámetro 32',qty:0},
+  {name:'Curva flexible PVC diámetro 32 gris claro',qty:0},
+  {name:'CABLE L.H. CPR 3G10mm RZ1-K 0.6/1KV',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm AZUL',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm MARRON',qty:0},
+  {name:'CABLE L.H. CPR ES07Z1-K 1X10mm A/V',qty:0},
+  {name:'Puntera 6mm sencilla',qty:100},{name:'Puntera 10mm sencilla',qty:100},
+  {name:'Tapa de registro 100x100',qty:3},
+  {name:'Caja de registro estanca 100x100',qty:3},
+  {name:'Tubo corrugado 32mm',qty:100},
+  {name:'Taco brida',qty:100},{name:'Brida',qty:100},
+];
+
+// =================================================================
+//  STATE
+// =================================================================
+let currentUser = null;
+let installs = [];
+let inventory = [];
+let selectedMats = {};
+let currentScheme = 0;
+let adminInstallFilter = 'all';
+let catFilter = 'all';
+let unsubInstalls = null;
+let unsubInventory = null;
+
+// =================================================================
+//  FIREBASE OPERATIONS
+// =================================================================
+async function initFirebase() {
+  try {
+    // Check if inventory exists, if not seed it
+    const invDoc = await db.collection('config').doc('inventory').get();
+    if (!invDoc.exists) {
+      const items = MATERIALS_RAW.map((m,i) => ({
+        id: i, name: m.name, cat: m.cat, unit: m.unit,
+        stock: {}, minimum: m.unit === 'm' ? 20 : 5
+      }));
+      await db.collection('config').doc('inventory').set({ items });
+    }
+    // Hide loading
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  } catch (err) {
+    console.error('Firebase init error:', err);
+    document.querySelector('#loadingOverlay div:last-child').textContent = 'Error de conexión. Revisa la config de Firebase.';
+    document.querySelector('#loadingOverlay div:last-child').style.color = 'var(--red)';
+  }
+}
+
+function listenInstalls() {
+  if (unsubInstalls) unsubInstalls();
+  unsubInstalls = db.collection('installs').orderBy('createdAt','desc').onSnapshot(snap => {
+    installs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (currentUser === 'admin') renderCurrentAdminView();
+    else renderTechInstalls();
+  });
+}
+
+function listenInventory() {
+  if (unsubInventory) unsubInventory();
+  unsubInventory = db.collection('config').doc('inventory').onSnapshot(doc => {
+    if (doc.exists) inventory = doc.data().items || [];
+    if (currentUser === 'admin') renderCurrentAdminView();
+  });
+}
+
+async function fbAddInstall(data) {
+  data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+  return db.collection('installs').add(data);
+}
+
+async function fbUpdateInventory(items) {
+  return db.collection('config').doc('inventory').set({ items });
+}
+
+async function fbDeleteInstall(id) {
+  return db.collection('installs').doc(id).delete();
+}
+
+// =================================================================
+//  AUTH
+// =================================================================
+function toggleAdminLogin() {
+  const form = document.getElementById('adminLoginForm');
+  form.classList.toggle('show');
+  if (form.classList.contains('show')) {
+    setTimeout(() => document.getElementById('adminEmail').focus(), 100);
+  }
+}
+
+function loginAdmin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  if (email === ADMIN_EMAIL && pass === 'Contraseña.') {
+    login('admin');
+  } else {
+    document.getElementById('adminError').style.display = 'block';
+    setTimeout(() => document.getElementById('adminError').style.display = 'none', 3000);
+  }
+}
+
+function login(userId) {
+  currentUser = userId;
+  const u = USERS[userId];
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const av = document.getElementById('topAvatar');
+  av.textContent = u.initials; av.style.background = u.grad;
+  document.getElementById('topName').textContent = u.name;
+  listenInstalls();
+  listenInventory();
+  if (u.role === 'admin') {
+    document.getElementById('techView').style.display = 'none';
+    document.getElementById('adminView').style.display = 'block';
+  } else {
+    document.getElementById('techView').style.display = 'block';
+    document.getElementById('adminView').style.display = 'none';
+    document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+    renderMatPicker();
+  }
+}
+
+function logout() {
+  currentUser = null; selectedMats = {}; currentScheme = 0;
+  if (unsubInstalls) { unsubInstalls(); unsubInstalls = null; }
+  if (unsubInventory) { unsubInventory(); unsubInventory = null; }
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminEmail').value = '';
+  document.getElementById('adminPass').value = '';
+  document.getElementById('adminLoginForm').classList.remove('show');
+}
+
+// =================================================================
+//  TECH — TABS & INSTALLS
+// =================================================================
+function switchTab(tab) {
+  document.getElementById('myInstalls').style.display = tab === 'myInstalls' ? 'block' : 'none';
+  document.getElementById('newInstall').style.display = tab === 'newInstall' ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='myInstalls')||(i===1&&tab==='newInstall')));
+  if (tab === 'newInstall') resetScheme();
+}
+
+function renderTechInstalls() {
+  if (!currentUser || currentUser === 'admin') return;
+  const list = document.getElementById('techInstallList');
+  const data = installs.filter(i => i.tech === currentUser);
+  if (!data.length) { list.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No tienes instalaciones registradas</div></div>'; return; }
+  list.innerHTML = data.map(inst => renderInstallCard(inst, false)).join('');
+}
+
+function renderInstallCard(inst, showTech) {
+  const mats = inst.materials || [];
+  const schemeBadge = inst.scheme ? `<span class="badge badge-orange">Esq. ${inst.scheme}</span>` : '';
+  const techBadge = showTech ? `<span class="badge badge-gray">${USERS[inst.tech]?.name || inst.tech}</span>` : '';
+  const dateStr = inst.date ? formatDate(inst.date) : '';
+  return `<div class="install-item" onclick="toggleInstall('${inst.id}')">
+    <div class="install-item-header">
+      <div class="install-item-name">${inst.client}</div>
+      <span class="badge ${inst.type==='Trifásica'?'badge-purple':'badge-blue'}">${inst.type}</span>
+    </div>
+    <div class="install-item-meta">${techBadge}${schemeBadge}<span class="install-item-date">📅 ${dateStr}</span><span class="install-item-date">🔧 ${mats.length} mat.</span></div>
+    <div class="install-materials" id="inst_${inst.id}">
+      <div class="section-title" style="margin-bottom:8px">MATERIALES</div>
+      ${mats.map(m=>`<div class="mat-row"><div class="mat-row-name">${m.name}</div><div class="mat-row-qty">${m.qty} ${m.unit}</div></div>`).join('')}
+      ${inst.notes?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">📝 ${inst.notes}</div>`:''}
+      ${showTech?`<button class="btn btn-danger btn-sm" style="margin-top:10px;width:100%" onclick="deleteInstall('${inst.id}',event)">🗑 Eliminar</button>`:''}
+    </div>
+  </div>`;
+}
+
+function toggleInstall(id) { const el=document.getElementById('inst_'+id); if(el) el.classList.toggle('open'); }
+
+async function deleteInstall(id, e) {
+  e.stopPropagation();
+  if (!confirm('¿Eliminar esta instalación?')) return;
+  try { await fbDeleteInstall(id); showToast('Eliminada'); } catch(err) { showToast('Error: '+err.message, true); }
+}
+
+// =================================================================
+//  ESQUEMAS
+// =================================================================
+function resetScheme() {
+  currentScheme = 0;
+  ['sBtn2','sBtn4','sBtnCustom'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('schemeBanner').style.display = 'none';
+  selectedMats = {};
+  renderSelectedMats(); filterMats();
+}
+
+function loadScheme(num) {
+  currentScheme = num;
+  ['sBtn2','sBtn4','sBtnCustom'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(num===2?'sBtn2':num===4?'sBtn4':'sBtnCustom').classList.add('active');
+  selectedMats = {};
+  const banner = document.getElementById('schemeBanner');
+  if (num === 0) { banner.style.display='none'; renderSelectedMats(); filterMats(); return; }
+  const scheme = num === 2 ? ESQUEMA_2 : ESQUEMA_4;
+  scheme.forEach(item => {
+    const mat = MATERIALS_RAW.find(m=>m.name===item.name);
+    if(mat) selectedMats[item.name] = { name:item.name, qty:item.qty, unit:mat.unit, cat:mat.cat };
+  });
+  const varCount = scheme.filter(i=>i.qty===0).length;
+  banner.style.display = 'flex';
+  banner.className = 'scheme-loaded-banner';
+  banner.innerHTML = `<span>⚡</span><span>Esquema ${num} · <b>${scheme.length} materiales</b> · <b style="color:var(--yellow)">${varCount} pendientes</b></span>`;
+  renderSelectedMats(); filterMats();
+  showToast(`Esquema ${num} cargado ✅`);
+}
+
+// =================================================================
+//  MAT PICKER
+// =================================================================
+function renderMatPicker() { filterMats(); }
+
+function filterMats() {
+  const q = (document.getElementById('matSearch')?.value||'').toLowerCase();
+  const list = document.getElementById('matPickerList');
+  if (!list) return;
+  const filtered = MATERIALS_RAW.filter(m => m.name.toLowerCase().includes(q) && !selectedMats[m.name]);
+  if (!filtered.length) { list.innerHTML='<div style="padding:12px;color:var(--text2);font-size:13px">Sin resultados</div>'; return; }
+  list.innerHTML = filtered.slice(0,25).map((m,i) =>
+    `<div class="mat-picker-item" onclick="addMat(this.dataset.n)" data-n="${m.name.replace(/"/g,'&quot;')}"><span>${m.name}</span><span>${m.cat}</span></div>`
+  ).join('');
+}
+
+function addMat(name) {
+  const mat = MATERIALS_RAW.find(m=>m.name===name);
+  if(!mat) return;
+  selectedMats[name] = { name, qty:1, unit:mat.unit, cat:mat.cat };
+  renderSelectedMats(); filterMats();
+}
+
+function renderSelectedMats() {
+  const container = document.getElementById('selectedMats');
+  if (!container) return;
+  const keys = Object.keys(selectedMats);
+  if (!keys.length) { container.innerHTML=''; return; }
+  container.innerHTML = keys.map((k,idx) => {
+    const m = selectedMats[k];
+    const isZero = m.qty === 0;
+    return `<div class="selected-mat-row" style="${isZero?'border:1px solid rgba(245,158,11,.4)':''}">
+      <div class="selected-mat-name">${m.name}${isZero?' <span style="color:var(--yellow);font-size:10px">⚠ pendiente</span>':''}</div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="changeQty(${idx},-1)">−</button>
+        <input class="qty-input" type="number" min="0" value="${m.qty}" onchange="setQty(${idx},this.value)" style="${isZero?'color:var(--yellow);border-color:var(--yellow)':''}">
+        <span class="qty-unit">${m.unit}</span>
+        <button class="qty-btn" onclick="changeQty(${idx},1)">+</button>
+      </div>
+      <button class="remove-mat" onclick="removeMat('${k.replace(/'/g,"\\'")}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function changeQty(idx, delta) {
+  const key = Object.keys(selectedMats)[idx]; if(!key) return;
+  selectedMats[key].qty = Math.max(0, selectedMats[key].qty + delta);
+  renderSelectedMats();
+}
+
+function setQty(idx, val) {
+  const key = Object.keys(selectedMats)[idx]; if(!key) return;
+  selectedMats[key].qty = Math.max(0, parseInt(val)||0);
+  renderSelectedMats();
+}
+
+function removeMat(name) { delete selectedMats[name]; renderSelectedMats(); filterMats(); }
+
+// =================================================================
+//  SAVE INSTALL
+// =================================================================
+async function saveInstall() {
+  const client = document.getElementById('fClient').value.trim();
+  const type = document.getElementById('fType').value;
+  const date = document.getElementById('fDate').value;
+  const notes = document.getElementById('fNotes').value.trim();
+
+  if (!client) { showToast('Introduce el nombre del cliente', true); return; }
+  if (!date) { showToast('Selecciona una fecha', true); return; }
+  const mats = Object.values(selectedMats);
+  if (!mats.length) { showToast('Añade al menos un material', true); return; }
+  const pending = mats.filter(m=>m.qty===0);
+  if (pending.length) { showToast(`${pending.length} material(es) con cantidad 0`, true); return; }
+
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true; saveBtn.textContent = '⏳ Guardando...';
+
+  try {
+    // Discount stock
+    mats.forEach(m => {
+      const inv = inventory.find(i => i.name === m.name);
+      if (inv) {
+        if (!inv.stock[currentUser]) inv.stock[currentUser] = 0;
+        inv.stock[currentUser] = Math.max(0, (inv.stock[currentUser]||0) - m.qty);
+      }
+    });
+    await fbUpdateInventory(inventory);
+
+    // Save install
+    await fbAddInstall({
+      tech: currentUser, client, type, date, notes,
+      scheme: currentScheme || null,
+      materials: mats
+    });
+
+    // Send email notification (fire and forget)
+    try {
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          tech: USERS[currentUser]?.name || currentUser,
+          client, date, type,
+          scheme: currentScheme || null,
+          materials: mats
+        })
+      });
+    } catch(e) { console.log('Email notification skipped:', e); }
+
+    // Reset form
+    document.getElementById('fClient').value = '';
+    document.getElementById('fNotes').value = '';
+    selectedMats = {}; currentScheme = 0;
+    resetScheme(); switchTab('myInstalls');
+    showToast('✅ Instalación guardada');
+  } catch (err) {
+    showToast('Error: ' + err.message, true);
+  } finally {
+    saveBtn.disabled = false; saveBtn.textContent = '✅ Guardar instalación';
+  }
+}
+
+// =================================================================
+//  ADMIN
+// =================================================================
+let currentAdminTab = 'overview';
+
+function renderCurrentAdminView() {
+  if (currentAdminTab === 'overview') renderAdminOverview();
+  else if (currentAdminTab === 'installs') renderAdminInstalls();
+  else if (currentAdminTab === 'inventory') renderInventory();
+}
+
+function adminTab(tab) {
+  currentAdminTab = tab;
+  ['overview','installs','inventory','reports'].forEach(t => {
+    document.getElementById('admin'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('.admin-tab').forEach((b,i) => b.classList.toggle('active', ['overview','installs','inventory','reports'][i]===tab));
+  renderCurrentAdminView();
+  if (tab==='reports') { const now=new Date(); document.getElementById('repMonth').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`; }
+}
+
+function renderAdminOverview() {
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const monthInstalls = installs.filter(i=>i.date?.startsWith(thisMonth));
+  const lowStock = getLowStock();
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${installs.length}</div><div class="stat-label">Instalaciones totales</div></div>
+    <div class="stat-card"><div class="stat-val">${monthInstalls.length}</div><div class="stat-label">Este mes</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red)">${lowStock.length}</div><div class="stat-label">Stock bajo</div></div>
+    <div class="stat-card"><div class="stat-val">${installs.filter(i=>i.scheme===2).length}</div><div class="stat-label">Esquema 2</div></div>`;
+  document.getElementById('lowStockList').innerHTML = !lowStock.length
+    ? '<div class="install-item" style="cursor:default"><span style="color:var(--green)">✅ Todo OK</span></div>'
+    : lowStock.slice(0,5).map(inv=>`<div class="inv-item"><div class="status-dot status-low"></div><div class="inv-item-info"><div class="inv-item-name">${inv.name}</div><div class="inv-item-cat">${inv.cat}</div></div><div class="inv-item-stock"><div class="inv-item-qty" style="color:var(--red)">${getTotalStock(inv)} ${inv.unit}</div><div class="inv-item-min">mín ${inv.minimum}</div></div></div>`).join('');
+  const recent = installs.slice(0,5);
+  document.getElementById('recentInstalls').innerHTML = recent.length
+    ? recent.map(i=>renderInstallCard(i,true)).join('')
+    : '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
+}
+
+function filterAdminInstalls(tech,btn) {
+  adminInstallFilter = tech;
+  document.querySelectorAll('#adminFilterBar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderAdminInstalls();
+}
+
+function renderAdminInstalls() {
+  let data = [...installs];
+  if (adminInstallFilter !== 'all') data = data.filter(i=>i.tech===adminInstallFilter);
+  document.getElementById('adminInstallList').innerHTML = data.length
+    ? data.map(i=>renderInstallCard(i,true)).join('')
+    : '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
+}
+
+function getTotalStock(inv) { return Object.values(inv.stock||{}).reduce((a,b)=>a+b,0); }
+function getLowStock() { return inventory.filter(inv=>getTotalStock(inv)<inv.minimum); }
+
+function filterByCat(cat,btn) {
+  catFilter = cat;
+  document.querySelectorAll('#catFilterBar .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderInventory();
+}
+
+function renderInventory() {
+  const cats = [...new Set(MATERIALS_RAW.map(m=>m.cat))];
+  document.getElementById('catFilterBar').innerHTML =
+    `<button class="filter-btn ${catFilter==='all'?'active':''}" onclick="filterByCat('all',this)">Todos</button>`+
+    cats.map(c=>`<button class="filter-btn ${catFilter===c?'active':''}" onclick="filterByCat('${c}',this)">${c}</button>`).join('');
+  const q = (document.getElementById('invSearch')?.value||'').toLowerCase();
+  let data = [...inventory];
+  if (catFilter!=='all') data = data.filter(i=>i.cat===catFilter);
+  if (q) data = data.filter(i=>i.name.toLowerCase().includes(q));
+  document.getElementById('inventoryList').innerHTML = data.map(inv => {
+    const total = getTotalStock(inv);
+    const status = total===0?'low':total<inv.minimum?'warn':'ok';
+    const col = {ok:'var(--green)',warn:'var(--yellow)',low:'var(--red)'}[status];
+    const bd = Object.entries(USERS).filter(([k])=>k!=='admin').map(([k,u])=>
+      `<span style="font-size:11px;color:var(--text2)">${u.initials}: <b style="color:var(--text)">${inv.stock?.[k]||0}</b></span>`).join(' · ');
+    return `<div class="inv-item" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px"><div class="status-dot status-${status}"></div><div class="inv-item-info"><div class="inv-item-name">${inv.name}</div><div class="inv-item-cat">${inv.cat}</div></div><div class="inv-item-stock"><div class="inv-item-qty" style="color:${col}">${total} ${inv.unit}</div><div class="inv-item-min">mín ${inv.minimum}</div></div></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;padding-left:20px">${bd}</div></div>`;
+  }).join('');
+}
+
+function openAddStock() {
+  document.getElementById('stockMat').innerHTML = inventory.map((inv,i)=>`<option value="${i}">${inv.name}</option>`).join('');
+  document.getElementById('stockQty').value = '';
+  document.getElementById('addStockModal').style.display = 'flex';
+}
+
+async function addStock() {
+  const tech = document.getElementById('stockTech').value;
+  const idx = parseInt(document.getElementById('stockMat').value);
+  const qty = parseInt(document.getElementById('stockQty').value);
+  if (!qty||qty<1) { showToast('Cantidad inválida', true); return; }
+  if (!inventory[idx].stock) inventory[idx].stock = {};
+  inventory[idx].stock[tech] = (inventory[idx].stock[tech]||0) + qty;
+  try {
+    await fbUpdateInventory(inventory);
+    closeModal('addStockModal');
+    showToast(`+${qty} ${inventory[idx].unit} → ${USERS[tech].name}`);
+  } catch(err) { showToast('Error: '+err.message, true); }
+}
+
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+
+// =================================================================
+//  REPORTS
+// =================================================================
+function generateReport() {
+  const tech = document.getElementById('repTech').value;
+  const month = document.getElementById('repMonth').value;
+  let data = installs.filter(i=>i.date?.startsWith(month));
+  if (tech!=='all') data = data.filter(i=>i.tech===tech);
+  if (!data.length) { showToast('No hay datos', true); return; }
+  const rows = [['Fecha','Técnico','Cliente','Tipo','Esquema','Material','Cantidad','Unidad']];
+  data.forEach(inst => {
+    (inst.materials||[]).forEach(m => {
+      rows.push([inst.date,USERS[inst.tech]?.name||inst.tech,inst.client,inst.type,inst.scheme?`Esquema ${inst.scheme}`:'Libre',m.name,m.qty,m.unit]);
+    });
+  });
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url;
+  a.download = `instalaciones_${month}${tech!=='all'?'_'+tech:''}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  const matTotals = {};
+  data.forEach(inst=>(inst.materials||[]).forEach(m=>{ matTotals[m.name]=(matTotals[m.name]||0)+m.qty; }));
+  document.getElementById('reportPreview').innerHTML = `<div class="card" style="margin-top:12px">
+    <div class="card-title" style="margin-bottom:12px">📊 Resumen ${month}</div>
+    <div class="report-row"><span style="color:var(--text2)">Instalaciones</span><b>${data.length}</b></div>
+    ${Object.entries(matTotals).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([name,qty])=>{
+      const unit=MATERIALS_RAW.find(m=>m.name===name)?.unit||'';
+      return `<div class="report-row"><span style="color:var(--text2);font-size:12px">${name}</span><b>${qty} ${unit}</b></div>`;
+    }).join('')}
+  </div>`;
+  showToast('CSV exportado ✅');
+}
+
+// =================================================================
+//  HELPERS
+// =================================================================
+function formatDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+function showToast(msg,isError=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.toggle('error',isError); t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// INIT
+initFirebase();
+</script>
+</body>
+</html>

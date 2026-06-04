@@ -582,23 +582,25 @@ function renderTechInstalls(){
   const list=document.getElementById('techInstallList');
   const data=installs.filter(i=>i.tech===currentUser);
   if(!data.length){list.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No tienes instalaciones registradas</div></div>';return;}
-  list.innerHTML=data.map(inst=>renderInstallCard(inst,false)).join('');
+  list.innerHTML=data.map(inst=>renderInstallCard(inst,false,'tech')).join('');
 }
 
-function renderInstallCard(inst,showTech){
+function renderInstallCard(inst,showTech,prefix){
+  prefix=prefix||'x';
+  const uid=prefix+'_'+inst.id;
   const mats=inst.materials||[];
   const schemeLbl=inst.scheme==='4c'?'Esq.4+cuadro':inst.scheme?`Esq.${inst.scheme}`:'';
   const schemeBadge=schemeLbl?`<span class="badge badge-orange">${schemeLbl}</span>`:'';
   const techBadge=showTech?`<span class="badge badge-gray">${USERS[inst.tech]?.name||inst.tech}</span>`:'';
   const chargerBadge=inst.charger?`<span class="badge badge-purple">${inst.charger}</span>`:'';
   const gdpBadge=inst.gdp?`<span class="badge badge-green">GDP</span>`:'';
-  return `<div class="install-item" onclick="toggleInstall('${inst.id}')">
+  return `<div class="install-item" onclick="toggleInstall('${uid}')">
     <div class="install-item-header">
       <div class="install-item-name">${inst.client}</div>
       <span class="badge ${inst.type==='Trifásica'?'badge-purple':'badge-blue'}">${inst.type}</span>
     </div>
     <div class="install-item-meta">${techBadge}${schemeBadge}${chargerBadge}${gdpBadge}<span class="install-item-date">📅 ${formatDate(inst.date)}</span><span class="install-item-date">🔧 ${mats.length} mat.</span></div>
-    <div class="install-materials" id="inst_${inst.id}">
+    <div class="install-materials" id="${uid}">
       <div class="section-title" style="margin-bottom:8px">MATERIALES CONSUMIDOS</div>
       ${mats.map(m=>`<div class="mat-row"><div class="mat-row-name">${m.name}</div><div class="mat-row-qty">${m.qty} ${m.unit}</div></div>`).join('')}
       ${inst.charger?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">🔌 Cargador: <b style="color:var(--text)">${inst.charger}</b></div>`:''}
@@ -609,7 +611,7 @@ function renderInstallCard(inst,showTech){
   </div>`;
 }
 
-function toggleInstall(id){const el=document.getElementById('inst_'+id);if(el)el.classList.toggle('open');}
+function toggleInstall(uid){const el=document.getElementById(uid);if(el)el.classList.toggle('open');}
 
 async function deleteInstall(id,e){
   e.stopPropagation();if(!confirm('¿Eliminar esta instalación?'))return;
@@ -744,7 +746,7 @@ function renderAdminOverview(){
   const low=getLowStock();
   document.getElementById('lowStockList').innerHTML=!low.length?'<div class="install-item" style="cursor:default"><span style="color:var(--green)">✅ Todo OK</span></div>':
     low.slice(0,5).map(inv=>`<div class="inv-item"><div class="status-dot status-low"></div><div class="inv-item-info"><div class="inv-item-name">${inv.name}</div><div class="inv-item-cat">${inv.cat}</div></div><div class="inv-item-stock"><div class="inv-item-qty" style="color:var(--red)">${getTotalStock(inv)} ${inv.unit}</div><div class="inv-item-min">mín ${inv.minimum}</div></div></div>`).join('');
-  document.getElementById('recentInstalls').innerHTML=installs.length?installs.slice(0,5).map(i=>renderInstallCard(i,true)).join(''):'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
+  document.getElementById('recentInstalls').innerHTML=installs.length?installs.slice(0,5).map(i=>renderInstallCard(i,true,'recent')).join(''):'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
 }
 
 function filterAdminInstalls(tech,btn){
@@ -756,7 +758,7 @@ function filterAdminInstalls(tech,btn){
 function renderAdminInstalls(){
   let data=[...installs];
   if(adminInstallFilter!=='all')data=data.filter(i=>i.tech===adminInstallFilter);
-  document.getElementById('adminInstallList').innerHTML=data.length?data.map(i=>renderInstallCard(i,true)).join(''):'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
+  document.getElementById('adminInstallList').innerHTML=data.length?data.map(i=>renderInstallCard(i,true,'adm')).join(''):'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No hay instalaciones</div></div>';
 }
 
 function getTotalStock(inv){return Object.values(inv.stock||{}).reduce((a,b)=>a+b,0);}

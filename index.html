@@ -256,9 +256,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
     <div class="modal-handle"></div>
     <div class="modal-title">📦 Entrada de material</div>
     <div class="form-group"><label class="form-label">Técnico</label><select class="form-select" id="stockTech"></select></div>
-    <div class="form-group"><label class="form-label">Material</label><select class="form-select" id="stockMat"></select></div>
-    <div class="form-group"><label class="form-label">Cantidad entregada</label><input class="form-input" id="stockQty" type="number" min="1" placeholder="0"></div>
-    <button class="btn btn-primary btn-full" onclick="addStock()" style="margin-top:8px">✅ Confirmar entrada</button>
+    <div class="form-group">
+      <input class="form-input" id="stockSearch" placeholder="🔍 Buscar material o cargador..." oninput="renderStockPicker()">
+    </div>
+    <div class="filter-bar scrollbar-hide" id="stockCatFilter" style="margin-bottom:10px"></div>
+    <div style="max-height:200px;overflow-y:auto;margin-bottom:12px;border:1px solid var(--border);border-radius:var(--radius-sm)" id="stockPickerList"></div>
+    <div id="stockSelected" style="margin-bottom:12px"></div>
+    <button class="btn btn-primary btn-full" onclick="addStock()">✅ Confirmar entrada</button>
   </div>
 </div>
 
@@ -377,6 +381,16 @@ const MATERIALS_RAW = [
   {name:'Caja de registro estanca 100x100',cat:'Caja',unit:'ud'},{name:'Caja de registro estanca 130x200',cat:'Caja',unit:'ud'},
   {name:'Tubo corrugado 32mm',cat:'Tubo/Curva',unit:'m'},
   {name:'Taco brida',cat:'Accesorio',unit:'ud'},{name:'Brida',cat:'Accesorio',unit:'ud'},
+  {name:'Pulsar MAX MONO 5M',cat:'Cargador',unit:'ud'},{name:'Pulsar MAX MONO 7M',cat:'Cargador',unit:'ud'},
+  {name:'Pulsar MAX TRI 5M',cat:'Cargador',unit:'ud'},{name:'Pulsar MAX TRI 7M',cat:'Cargador',unit:'ud'},
+  {name:'AUDI MONO 5M',cat:'Cargador',unit:'ud'},{name:'AUDI MONO 7M',cat:'Cargador',unit:'ud'},
+  {name:'AUDI TRI 5M',cat:'Cargador',unit:'ud'},{name:'AUDI TRI 7M',cat:'Cargador',unit:'ud'},
+  {name:'HYUNDAI MONO 5M',cat:'Cargador',unit:'ud'},{name:'HYUNDAI MONO 7M',cat:'Cargador',unit:'ud'},
+  {name:'HYUNDAI TRI 5M',cat:'Cargador',unit:'ud'},{name:'HYUNDAI TRI 7M',cat:'Cargador',unit:'ud'},
+  {name:'ARVAL MONO 5M',cat:'Cargador',unit:'ud'},{name:'ARVAL MONO 7M',cat:'Cargador',unit:'ud'},
+  {name:'ARVAL TRI 5M',cat:'Cargador',unit:'ud'},{name:'ARVAL TRI 7M',cat:'Cargador',unit:'ud'},
+  {name:'NISSAN MONO 5M',cat:'Cargador',unit:'ud'},{name:'NISSAN MONO 7M',cat:'Cargador',unit:'ud'},
+  {name:'NISSAN TRI 5M',cat:'Cargador',unit:'ud'},
 ];
 
 // ESQUEMAS
@@ -794,18 +808,91 @@ function renderInventory(){
   }).join('');
 }
 
+let stockItems={};
+let stockCatFilter='all';
+
 function openAddStock(){
-  document.getElementById('stockMat').innerHTML=inventory.map((inv,i)=>`<option value="${i}">${inv.name}</option>`).join('');
-  document.getElementById('stockQty').value='';document.getElementById('addStockModal').style.display='flex';
+  stockItems={};stockCatFilter='all';
+  document.getElementById('stockSearch').value='';
+  document.getElementById('addStockModal').style.display='flex';
+  renderStockCatFilter();renderStockPicker();renderStockSelected();
+}
+
+function renderStockCatFilter(){
+  const cats=[...new Set(MATERIALS_RAW.map(m=>m.cat))];
+  document.getElementById('stockCatFilter').innerHTML=
+    `<button class="filter-btn ${stockCatFilter==='all'?'active':''}" onclick="stockCatFilter='all';renderStockCatFilter();renderStockPicker()">Todos</button>`+
+    cats.map(c=>`<button class="filter-btn ${stockCatFilter===c?'active':''}" onclick="stockCatFilter='${c}';renderStockCatFilter();renderStockPicker()">${c}</button>`).join('');
+}
+
+function renderStockPicker(){
+  const q=(document.getElementById('stockSearch')?.value||'').toLowerCase();
+  let data=MATERIALS_RAW.filter(m=>!stockItems[m.name]);
+  if(stockCatFilter!=='all')data=data.filter(m=>m.cat===stockCatFilter);
+  if(q)data=data.filter(m=>m.name.toLowerCase().includes(q));
+  const list=document.getElementById('stockPickerList');
+  if(!data.length){list.innerHTML='<div style="padding:14px;color:var(--text2);font-size:13px;text-align:center">Sin resultados</div>';return;}
+  list.innerHTML=data.slice(0,30).map(m=>{
+    const isCh=m.cat==='Cargador';
+    return `<div class="mat-picker-item" onclick="addStockItem(this.dataset.n)" data-n="${m.name.replace(/"/g,'&quot;')}" style="${isCh?'border-left:3px solid var(--accent2);':''}">
+      <span>${m.name}</span><span>${m.cat}</span></div>`;
+  }).join('');
+}
+
+function addStockItem(name){
+  const mat=MATERIALS_RAW.find(m=>m.name===name);if(!mat)return;
+  stockItems[name]={name,qty:1,unit:mat.unit,cat:mat.cat};
+  renderStockPicker();renderStockSelected();
+}
+
+function removeStockItem(name){delete stockItems[name];renderStockPicker();renderStockSelected();}
+
+function changeStockQty(name,delta){
+  if(!stockItems[name])return;
+  stockItems[name].qty=Math.max(1,stockItems[name].qty+delta);
+  renderStockSelected();
+}
+
+function setStockQty(name,val){
+  if(!stockItems[name])return;
+  stockItems[name].qty=Math.max(1,parseInt(val)||1);
+  renderStockSelected();
+}
+
+function renderStockSelected(){
+  const c=document.getElementById('stockSelected');
+  const keys=Object.keys(stockItems);
+  if(!keys.length){c.innerHTML='<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Selecciona materiales de la lista</div>';return;}
+  c.innerHTML='<div class="section-title">Materiales seleccionados ('+keys.length+')</div>'+
+    keys.map(k=>{const m=stockItems[k];const isCh=m.cat==='Cargador';
+      return `<div class="selected-mat-row" style="${isCh?'border-left:3px solid var(--accent2)':''}">
+        <div class="selected-mat-name">${m.name}<br><span style="font-size:10px;color:var(--text3)">${m.cat}</span></div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="changeStockQty('${k.replace(/'/g,"\\'")}', -1)">−</button>
+          <input class="qty-input" type="number" min="1" value="${m.qty}" onchange="setStockQty('${k.replace(/'/g,"\\'")}',this.value)">
+          <span class="qty-unit">${m.unit}</span>
+          <button class="qty-btn" onclick="changeStockQty('${k.replace(/'/g,"\\'")}', 1)">+</button>
+        </div>
+        <button class="remove-mat" onclick="removeStockItem('${k.replace(/'/g,"\\'")}')">✕</button>
+      </div>`;
+    }).join('');
 }
 
 async function addStock(){
-  const tech=document.getElementById('stockTech').value;const idx=parseInt(document.getElementById('stockMat').value);
-  const qty=parseInt(document.getElementById('stockQty').value);
-  if(!qty||qty<1){showToast('Cantidad inválida',true);return;}
-  if(!inventory[idx].stock)inventory[idx].stock={};
-  inventory[idx].stock[tech]=(inventory[idx].stock[tech]||0)+qty;
-  try{await fbUpdateInventory(inventory);closeModal('addStockModal');showToast(`+${qty} ${inventory[idx].unit} → ${USERS[tech].name}`);}
+  const tech=document.getElementById('stockTech').value;
+  const items=Object.values(stockItems);
+  if(!items.length){showToast('Selecciona al menos un material',true);return;}
+  let summary=[];
+  items.forEach(item=>{
+    const inv=inventory.find(i=>i.name===item.name);
+    if(inv){
+      if(!inv.stock)inv.stock={};
+      inv.stock[tech]=(inv.stock[tech]||0)+item.qty;
+      summary.push(`+${item.qty} ${item.unit}`);
+    }
+  });
+  try{await fbUpdateInventory(inventory);closeModal('addStockModal');stockItems={};
+    showToast(`${items.length} material(es) → ${USERS[tech].name} ✅`);}
   catch(err){showToast('Error: '+err.message,true);}
 }
 

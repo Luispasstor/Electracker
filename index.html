@@ -552,6 +552,18 @@ async function initFirebase(){
     if(!inv.exists){
       const items=MATERIALS_RAW.map((m,i)=>({id:i,name:m.name,cat:m.cat,unit:m.unit,stock:{},minimum:m.unit==='m'?20:5}));
       await db.collection('config').doc('inventory').set({items});
+    }else{
+      // Sync: add any new materials not yet in inventory
+      const existing=inv.data().items||[];
+      const existingNames=new Set(existing.map(i=>i.name));
+      let added=false;
+      MATERIALS_RAW.forEach((m,i)=>{
+        if(!existingNames.has(m.name)){
+          existing.push({id:existing.length,name:m.name,cat:m.cat,unit:m.unit,stock:{},minimum:m.unit==='m'?20:5});
+          added=true;
+        }
+      });
+      if(added) await db.collection('config').doc('inventory').set({items:existing});
     }
     document.getElementById('loadingOverlay').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
